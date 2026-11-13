@@ -9,6 +9,7 @@ A scanner tells you *what* is open. Each recipe here tells you what it means, ho
 | Row Level Security is disabled on a public table | Anyone who opens your site can read, and often change or delete, every row in that table | [supabase-rls-disabled](recipes/supabase-rls-disabled.md) |
 | Supabase service role key found in the browser bundle | Anyone can copy that key from your site's code and read or delete your whole database | [supabase-service-role-key-exposed](recipes/supabase-service-role-key-exposed.md) |
 | Supabase storage bucket is public | Anyone with a file's link can open it without logging in | [supabase-storage-bucket-public](recipes/supabase-storage-bucket-public.md) |
+| Security Definer View (Supabase Security Advisor, lint 0010) | A view hands out rows that Row Level Security protects on the table itself | [supabase-security-definer-view](recipes/supabase-security-definer-view.md) |
 
 ## How to use a recipe
 
