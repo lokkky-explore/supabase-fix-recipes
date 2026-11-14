@@ -193,4 +193,5 @@ for (const f of fixes) {
   console.log(`\n${flag ? "FAIL" : "PASS"} ${f.slug}\n  ` + out.join("\n  "));
   await db.close();
 }
-console.log(`\n${bad} page(s) with problems`);
+console.log(`\n${fixes.length - bad} of ${fixes.length} recipes pass`);
+process.exit(bad ? 1 : 0);
