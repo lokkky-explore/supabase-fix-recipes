@@ -54,6 +54,29 @@ export default (A: string, B: string, NOTES: string, ok: any) => {
         `new table: ${await c.db.exec("create table public.later (id int)").then(async () => `authenticated=${await priv(c, "authenticated", "public.later")} (want 0)`)}`,
       ],
     },
+    "supabase-users-can-see-other-users-data": {
+      pre: NOTES + `alter table public.notes enable row level security;
+        create policy "read own rows old" on public.notes for select to authenticated using ((select auth.uid()) = user_id);
+        create policy "users can read" on public.notes for select to authenticated using (true);
+        create table public.team_members (team_id int, user_id uuid); alter table public.team_members enable row level security;
+        create table public.projects (id serial primary key, team_id int, name text); alter table public.projects enable row level security;
+        create policy "projects open" on public.projects for select to authenticated using (name is not null);
+        insert into public.team_members values (1,'${A}'),(2,'${B}'); insert into public.projects(team_id,name) values (1,'p1'),(2,'p2'),(2,'p3');`,
+      expectCheckBefore: 2,
+      after: async (c: any) => {
+        const before = `check after: still lists the untouched loose rule on projects`;
+        await c.db.exec(`drop policy "projects open" on public.projects`);
+        return [
+          before,
+          `anon notes=${await c.count("anon", null, "select * from public.notes")} (want 0)`,
+          `A notes=${await c.count("authenticated", { sub: A }, "select * from public.notes")} (want 2)`,
+          `B notes=${await c.count("authenticated", { sub: B }, "select * from public.notes")} (want 1)`,
+          `A projects=${await c.count("authenticated", { sub: A }, "select * from public.projects")} (want 1)`,
+          `B projects=${await c.count("authenticated", { sub: B }, "select * from public.projects")} (want 2)`,
+          `A memberships=${await c.count("authenticated", { sub: A }, "select * from public.team_members")} (want 1)`,
+        ];
+      },
+    },
     "supabase-security-definer-function-authenticated": {
       pre: `create function public.my_priv_op(a int, b text) returns int language sql security definer set search_path = '' as $$ select 1 $$;`,
       expectCheckBefore: 1, expectCheckAfter: 0,
