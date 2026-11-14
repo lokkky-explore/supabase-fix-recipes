@@ -4,17 +4,17 @@
 
 ## What it means
 
-This is a WARN in Supabase’s own Security Advisor (lint 0024_permissive_rls_policy). It flags rules whose condition is simply true, such as using (true) or with check (true).
+This is a WARN in Supabase’s own Security Advisor (lint 0024_permissive_rls_policy). It flags rules that let someone insert, change or delete rows under a condition that is simply true, such as using (true) or with check (true). It leaves out always-true rules that only allow reading, because those are often deliberate.
 
 RLS being switched on is not the same as RLS doing anything. A rule that says true for everyone behaves like no protection at all, only harder to spot.
 
-The quiet version is an always-true rule for logged-in users only. A scan from outside with the public key comes back clean, because a visitor who is not logged in sees nothing. Yet anyone who signs up can read every other customer’s rows. Only reading the rules, or testing with two accounts, finds it.
+The quiet version is an always-true rule for logged-in users only. A scan from outside with the public key comes back clean, because a visitor who is not logged in sees nothing. Yet anyone who signs up can read every other customer’s rows. The Security Advisor does not warn about it either, since it skips read-only rules. Only reading the rules, or testing with two accounts, finds it. The check below lists read rules too for that reason.
 
 Some tables are meant to be public, such as a product list people can read. For those, a read-only always-true rule can be intentional, and the Supabase documentation says such cases can be accepted. The ones to fix are rules that also allow writes, or that cover tables holding user data.
 
 ## Check it yourself
 
-Run this in the Supabase SQL editor. Each row is a rule whose condition is plainly true.
+Run this in the Supabase SQL editor. Each row is a rule whose condition is plainly true, including read-only rules that the Security Advisor leaves out.
 
 ```sql
 select schemaname, tablename, policyname, cmd, roles
