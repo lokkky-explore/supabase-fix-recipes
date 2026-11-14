@@ -20,7 +20,7 @@ from pg_policies
 where schemaname = 'public'
   and cmd in ('SELECT', 'ALL')
   and permissive = 'PERMISSIVE'
-  and coalesce(qual, 'true') !~* '(auth.uid|auth.jwt|current_setting)'
+  and coalesce(qual, 'true') !~* '(auth\.uid|auth\.jwt|current_setting)'
 order by 1, 2;
 ```
 

@@ -50,6 +50,9 @@ order by 1, 2;
      tax_id text
    );
    
+   -- belt and braces: if this schema is ever exposed by mistake, the table still returns nothing
+   alter table private.customer_secrets enable row level security;
+   
    insert into private.customer_secrets (customer_id, tax_id)
    select id, tax_id from public.customers;
    
