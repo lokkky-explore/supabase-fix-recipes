@@ -20,6 +20,13 @@ A scanner tells you *what* is open. Each recipe here tells you what it means, ho
 | Public Can Execute SECURITY DEFINER Function (Supabase Security Advisor, lint 0028) | Anyone with your public key can run that function over the web, and it runs with its owner’s permissions, skipping your Row Level Security rules. | [supabase-security-definer-function-anon](recipes/supabase-security-definer-function-anon.md) |
 | Sensitive Columns Exposed (Supabase Security Advisor, lint 0023) | Anyone with your public key can read columns that look like passwords, card details or personal ID numbers, because the table has no Row Level Security. | [supabase-sensitive-columns-exposed](recipes/supabase-sensitive-columns-exposed.md) |
 | Anonymous sign-ins enabled (Supabase Security Advisor, lint 0012) | Anyone can create a throwaway account with no email, and your rules for logged-in users will treat it like a real one. | [supabase-anonymous-sign-ins-enabled](recipes/supabase-anonymous-sign-ins-enabled.md) |
+| Extension in Public (Supabase Security Advisor, lint 0014) | An extension’s own tables and functions show up in your project’s public API, where they were never meant to be. | [supabase-extension-in-public](recipes/supabase-extension-in-public.md) |
+| Materialized View in API (Supabase Security Advisor, lint 0016) | Anyone who can reach your API can read every row of that materialized view, because Row Level Security cannot be applied to it. | [supabase-materialized-view-in-api](recipes/supabase-materialized-view-in-api.md) |
+| Foreign Table in API (Supabase Security Advisor, lint 0017) | Anyone who can reach your API can read every row of that foreign table, because Row Level Security cannot be applied to it. | [supabase-foreign-table-in-api](recipes/supabase-foreign-table-in-api.md) |
+| Insecure Queue Exposed in API (Supabase Security Advisor, lint 0019) | Anyone with your project’s address and public key can read, change and delete the messages in that queue. | [supabase-insecure-queue-exposed](recipes/supabase-insecure-queue-exposed.md) |
+| Public Can See Object in GraphQL Schema (Supabase Security Advisor, lint 0026) | Anyone with your public key can list the names and columns of your tables and views through the GraphQL address, even where Row Level Security hides the rows. | [supabase-graphql-anon-table-exposed](recipes/supabase-graphql-anon-table-exposed.md) |
+| Signed-In Users Can See Object in GraphQL Schema (Supabase Security Advisor, lint 0027) | Anyone who signs up, even with a throwaway account, can list the names and columns of your tables and views through the GraphQL address. | [supabase-graphql-authenticated-table-exposed](recipes/supabase-graphql-authenticated-table-exposed.md) |
+| Signed-In Users Can Execute SECURITY DEFINER Function (Supabase Security Advisor, lint 0029) | Any signed-in user, including a throwaway account if signup is open, can run that function over the web, and it runs with its owner’s permissions, skipping your Row Level Security rules. | [supabase-security-definer-function-authenticated](recipes/supabase-security-definer-function-authenticated.md) |
 
 ## How to use a recipe
 
@@ -29,6 +36,17 @@ A scanner tells you *what* is open. Each recipe here tells you what it means, ho
 4. Run your scanner again.
 
 Table, column and bucket names in the recipes are examples: replace them with yours.
+
+## The SQL is tested
+
+Every SQL block in these recipes is run against a real Postgres database (PGlite, in memory) set up with Supabase-style `anon` and `authenticated` roles and two test users. For each recipe the test builds the insecure state, runs the check, applies the fix, then tries to read or write as the wrong user.
+
+```
+npm install
+npm test
+```
+
+The test database is not a Supabase project: the `auth` and `storage` schemas are small stand-ins, and extensions such as `pg_graphql` and `pgmq` are not installed, so those recipes are tested for the grants and rules only. Dashboard steps and app code are not tested.
 
 ## Scope and limits
 
@@ -44,4 +62,4 @@ Found a finding that should have a recipe, or a recipe that breaks something? Op
 
 ---
 
-Written with AI tools and checked against Supabase's documentation. Not affiliated with Supabase, Lovable, Bolt, Cursor or Anthropic. Text under [CC BY 4.0](LICENSE). Lok & Co. is a brand of LOK SAAS SERVICES (Reg. No. 202603165383).
+Written with AI tools, checked against Supabase's documentation, and tested as described above. Not affiliated with Supabase, Lovable, Bolt, Cursor or Anthropic. Text under [CC BY 4.0](LICENSE). Lok & Co. is a brand of LOK SAAS SERVICES (Reg. No. 202603165383).

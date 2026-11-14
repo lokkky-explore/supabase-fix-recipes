@@ -1,0 +1,7 @@
+{
+  "name": "supabase-fix-recipes",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --experimental-strip-types --no-warnings tests/verify.mts" },
+  "devDependencies": { "@electric-sql/pglite": "^0.5.16" }
+}

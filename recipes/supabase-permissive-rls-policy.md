@@ -8,6 +8,8 @@ This is a WARN in Supabase’s own Security Advisor (lint 0024_permissive_rls_po
 
 RLS being switched on is not the same as RLS doing anything. A rule that says true for everyone behaves like no protection at all, only harder to spot.
 
+The quiet version is an always-true rule for logged-in users only. A scan from outside with the public key comes back clean, because a visitor who is not logged in sees nothing. Yet anyone who signs up can read every other customer’s rows. Only reading the rules, or testing with two accounts, finds it.
+
 Some tables are meant to be public, such as a product list people can read. For those, a read-only always-true rule can be intentional, and the Supabase documentation says such cases can be accepted. The ones to fix are rules that also allow writes, or that cover tables holding user data.
 
 ## Check it yourself

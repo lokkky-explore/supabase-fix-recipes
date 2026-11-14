@@ -45,7 +45,7 @@ order by 1, 2, 3;
 
 3. Then drop the old rule.
 
-   ```text
+   ```sql
    drop policy "old admin rule" on public.reports;
    ```
 

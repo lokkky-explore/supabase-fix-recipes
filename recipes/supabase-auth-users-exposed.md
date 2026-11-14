@@ -68,7 +68,7 @@ order by 1, 2;
 
 3. Point the app at public.profiles, then remove the old view.
 
-   ```text
+   ```sql
    drop view public.user_list;
    ```
 

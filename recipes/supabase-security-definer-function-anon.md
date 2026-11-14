@@ -34,7 +34,7 @@ order by 1;
 
 2. If logged-in users should still be able to call it, give that back to them only. Think about whether they should: the sibling lint 0029 will flag it.
 
-   ```text
+   ```sql
    grant execute on function public.my_priv_op(int, text) to authenticated;
    ```
 

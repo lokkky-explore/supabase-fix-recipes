@@ -28,7 +28,7 @@ where schemaname = 'storage'
 
 1. Drop the listing rule. Use the exact name from the check above; the name below is the one Supabase’s own example uses.
 
-   ```text
+   ```sql
    drop policy if exists "Public bucket listing" on storage.objects;
    ```
 
