@@ -54,10 +54,10 @@ order by 1, 2;
 
    ```sql
    revoke all on all tables in schema public from anon;
-   
+
    alter default privileges in schema public
-     revoke select on tables from anon;
-   
+     revoke all on tables from anon;
+
    grant select on public.profiles to authenticated;
    grant select, insert on public.orders to authenticated;
    ```
@@ -67,6 +67,10 @@ order by 1, 2;
 ## What can break
 
 Any page that shows data to visitors who are not logged in goes blank once the public loses select on its table, so keep the grants for genuinely public tables such as a product list. Dropping the extension ends the GraphQL address for everyone. Revoking from anon alone hides nothing from signed-up users, which is why lint 0027 exists.
+
+## Undo it
+
+To restore a grant, run `grant select on public.some_table to anon;` for each table that stopped working. To restore the old default for new tables, run `alter default privileges in schema public grant select on tables to anon;`. Dropping the extension can be undone with `create extension pg_graphql;`, but run the revokes in step 3 from a saved list of grants (take it before you change anything) so you can put back what you removed. To confirm the fix, run the check again.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

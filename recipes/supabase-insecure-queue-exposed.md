@@ -47,6 +47,10 @@ select current_setting('pgrst.db_schemas', true) as exposed_schemas;
 
 Switching Row Level Security on without rules cuts off anything that sends or reads messages through the API, so a job that used to run from the browser stops quietly. Removing pgmq_public from the API list does the same for every queue at once. Messages that were open until now may have been read or changed by others, so look through the queue for entries you did not expect.
 
+## Undo it
+
+To switch it back, run `alter table pgmq.q_foo disable row level security;`, or add pgmq_public to the exposed schemas again in the API settings. Both reopen the queue to anyone with your public key. To confirm the fix, run the first check again: it should return no rows.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-insecure-queue-exposed

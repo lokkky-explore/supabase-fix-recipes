@@ -48,7 +48,11 @@ order by 1;
 
 ## What can break
 
-A visitor-facing feature that calls the function (a sign-up count, a public form) stops working until you decide how it should work. Rules on your tables that call the function in their condition also fail for roles that lost permission. Switching to security invoker can make the function return less or fail where a table has no read rule for the caller.
+A visitor-facing feature that calls the function (a sign-up count, a public form) stops working until you decide how it should work. Rules on your tables that call the function in their condition also fail for roles that lost permission. Revoking from public also removes permission from Supabase’s own internal roles, so if the function is set up as an Auth Hook (for example a custom access token hook), revoking can lock every user out of signing in. Check Authentication, Hooks in the dashboard before you revoke, and keep `grant execute ... to supabase_auth_admin` for a hook function. Switching to security invoker can make the function return less or fail where a table has no read rule for the caller.
+
+## Undo it
+
+To give permission back, run `grant execute on function public.my_priv_op(int, text) to anon, public;`. To undo step 3, run `alter function public.my_priv_op(int, text) security definer;`. Both reopen the finding. To confirm the fix, run the check again: the function should no longer be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

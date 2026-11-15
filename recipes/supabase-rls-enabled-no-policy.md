@@ -33,7 +33,7 @@ order by 1;
    create policy "read own rows" on public.notes
      for select to authenticated
      using ((select auth.uid()) = user_id);
-   
+
    create policy "insert own rows" on public.notes
      for insert to authenticated
      with check ((select auth.uid()) = user_id);
@@ -51,6 +51,10 @@ order by 1;
 ## What can break
 
 Adding a rule that is too wide can undo the lock. Do not paste in a rule that allows everything just to make the warning go away: that trades this finding for a worse one. Tables with no user_id column, shared team data and admin screens each need a different rule.
+
+## Undo it
+
+Remove a rule you added with `drop policy "read own rows" on public.notes;`. The table goes back to returning nothing through the API. Do not switch RLS off to undo this: that opens the table to everyone. To confirm the fix, run the check again: each table you gave rules to should no longer be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

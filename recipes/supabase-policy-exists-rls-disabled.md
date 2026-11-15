@@ -48,6 +48,10 @@ order by 1;
 
 The table has been open to everyone until now, so the app may have grown to depend on that. The moment RLS goes on, any screen the rules do not cover comes back empty or fails to save. Rules written long ago may be wrong or missing an action such as insert, so read them before you switch it on, and test on a branch or a copy first.
 
+## Undo it
+
+If the app breaks, fix or add the missing rule first. As a short stop-gap only, `alter table public.notes disable row level security;` puts the table back as it was, open to everyone. To confirm the fix, run the check again: the table should no longer be listed.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-policy-exists-rls-disabled

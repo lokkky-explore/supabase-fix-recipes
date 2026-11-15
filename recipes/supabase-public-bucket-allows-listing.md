@@ -55,6 +55,10 @@ where schemaname = 'storage'
 
 Any screen that lists a bucket’s contents with the public key, such as a gallery built from the storage list call, goes empty once the rule is gone. Keep a table of file names in your own database and read from that instead. Making the bucket private breaks every public link already saved, so do not use that step for files people embed.
 
+## Undo it
+
+Save the dropped rule’s text first (the check shows it in the qual column). To restore it, create it again with that text. To undo step 2, run `drop policy "list own files" on storage.objects;`. To undo step 3, run `update storage.buckets set public = true where id = 'avatars';`. To confirm the fix, run the check again: no rule should be left that lets everyone read the bucket.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-public-bucket-allows-listing

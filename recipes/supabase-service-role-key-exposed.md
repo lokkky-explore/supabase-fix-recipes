@@ -30,7 +30,7 @@ service_role
    ```ts
    // Supabase Edge Function: the key never leaves the server
    import { createClient } from "npm:@supabase/supabase-js@2";
-   
+
    const admin = createClient(
      Deno.env.get("SUPABASE_URL")!,
      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -44,6 +44,10 @@ service_role
 ## What can break
 
 Revoking the key stops every feature that used it until the server version is live, so plan the swap. If the key was public for a while, also look through your data and logs for changes you did not make.
+
+## Undo it
+
+A deleted or disabled key cannot be brought back, and you should not want to: a copy is already out. If a server job breaks, create a new secret key and put it in that server’s settings. Never put a key back into front-end code. To confirm the fix, search the live bundle again for the two strings above; neither should appear, and the old key should be refused when you try it.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

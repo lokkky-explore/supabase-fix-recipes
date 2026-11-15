@@ -47,7 +47,7 @@ order by 1;
    ```sql
    alter default privileges
      revoke execute on functions from public;
-   
+
    alter default privileges in schema public
      revoke execute on functions from anon, authenticated;
    ```
@@ -56,7 +56,11 @@ order by 1;
 
 ## What can break
 
-A feature that calls the function from a logged-in screen stops working with a permission error until you decide how it should work. Rules on your tables that call the function in their condition also fail for roles that lost permission. Switching to security invoker can make the function return less, or fail, where a table has no read rule for the caller. Change one function at a time and test the feature that uses it.
+A feature that calls the function from a logged-in screen stops working with a permission error until you decide how it should work. Rules on your tables that call the function in their condition also fail for roles that lost permission. Revoking from public also removes permission from Supabase’s own internal roles, so if the function is set up as an Auth Hook (for example a custom access token hook), revoking can lock every user out of signing in. Check Authentication, Hooks in the dashboard before you revoke, and keep `grant execute ... to supabase_auth_admin` for a hook function. Switching to security invoker can make the function return less, or fail, where a table has no read rule for the caller. Change one function at a time and test the feature that uses it.
+
+## Undo it
+
+To give permission back, run `grant execute on function public.my_priv_op(int, text) to authenticated;`. To undo step 2, run `alter function public.my_priv_op(int, text) security definer;`. To undo step 4, run `alter default privileges grant execute on functions to public;` and `alter default privileges in schema public grant execute on functions to anon, authenticated;`. To confirm the fix, run the check again: only the functions you chose to keep should be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

@@ -29,13 +29,7 @@ order by 1;
 
 ## The fix
 
-1. Fix the search_path on each function listed. An empty value means the function can only see built-in names, unless you write the schema in front.
-
-   ```sql
-   alter function public.note_count(uuid) set search_path = '';
-   ```
-
-2. Then open the function body and put the schema in front of every table and function it uses, so nothing depends on the search_path. Here is the same idea written out in full.
+1. Open each function’s body (in the dashboard, or with `select pg_get_functiondef('public.note_count(uuid)'::regprocedure);`) and put the schema in front of every table and function it uses, so nothing depends on the search_path. Functions that use something from an extension need that extension’s schema in front too, for example extensions.some_function(). Here is the idea written out in full, with the search_path fixed in the same statement so the function is never live with an empty path and unqualified names.
 
    ```sql
    create or replace function public.note_count(owner_id uuid)
@@ -48,13 +42,21 @@ order by 1;
    $$;
    ```
 
-3. Functions that use something from an extension need that extension’s schema in front too, for example extensions.some_function(). Look for it in the function body.
+2. If a function’s body already uses a schema in front of every name, you can fix just its search_path. An empty value means the function can only see built-in names. Do not run this on a function until you have read its body.
 
-4. Trigger the feature that uses each function once, then refresh the Security Advisor and run your scanner again.
+   ```sql
+   alter function public.note_count(uuid) set search_path = '';
+   ```
+
+3. Trigger the feature that uses each function once, then refresh the Security Advisor and run your scanner again.
 
 ## What can break
 
 If the search_path is emptied but the function body still uses bare names, the function fails with errors such as “relation does not exist”, and anything that fires it (a trigger on insert, a sign-up flow) can start failing. Change one function at a time and test the feature that calls it.
+
+## Undo it
+
+To return one function to how it was, run `alter function public.note_count(uuid) reset search_path;`. If you replaced the body, put the old body back from your saved copy (take it with `pg_get_functiondef` before you change anything). To confirm the fix, run the check again: the function should no longer be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

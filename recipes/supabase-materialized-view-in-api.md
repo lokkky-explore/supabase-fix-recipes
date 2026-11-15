@@ -50,6 +50,10 @@ order by 1, 2;
 
 Any screen that reads the materialized view with the public key or a user login stops working the moment the permission goes, and shows an error or an empty list. Revoking is blunt: it removes access for every user, so plan the replacement before you do it. The view itself and its data are not deleted.
 
+## Undo it
+
+To give read permission back, run `grant select on public.sales_totals to anon, authenticated;`. That reopens the finding. To confirm the fix, run the check again: the view should no longer be listed.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-materialized-view-in-api

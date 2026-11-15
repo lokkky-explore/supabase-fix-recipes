@@ -35,7 +35,7 @@ order by 1, 2, 3;
    });
    ```
 
-2. Add the new rule first. Rules add together, so while both exist the old one still lets people in.
+2. Add the new rule first. Rules add together, so while both exist the old one still lets people in. The example covers reading only: if the old rule also allowed insert, update or delete (check the cmd column above), add a matching new rule for each action before you drop it.
 
    ```sql
    create policy "admins read all reports" on public.reports
@@ -56,6 +56,10 @@ order by 1, 2, 3;
 ## What can break
 
 Existing logins carry the old token until it refreshes, so a new admin may not see the change until they sign in again. Anyone who was admin only because they edited their own metadata loses access, which is the point, but check the list of real admins first. Review the data too: if the old rule was open for a while, look for changes you did not make.
+
+## Undo it
+
+Before you drop the old rule, save its text from the check (add the qual and with_check columns to the select). To restore it, create it again with that text, and accept that the hole is back. Remove the new rule with `drop policy "admins read all reports" on public.reports;`. To confirm the fix, run the check again: it should return no rows.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

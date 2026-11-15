@@ -31,9 +31,9 @@ order by 1, 2;
      id uuid primary key references auth.users (id) on delete cascade,
      display_name text
    );
-   
+
    alter table public.profiles enable row level security;
-   
+
    create policy "read own profile" on public.profiles
      for select to authenticated
      using ((select auth.uid()) = id);
@@ -54,15 +54,15 @@ order by 1, 2;
      return new;
    end;
    $$;
-   
+
    revoke execute on function public.handle_new_user() from anon, authenticated, public;
-   
+
    create trigger on_auth_user_created
      after insert on auth.users
      for each row execute function public.handle_new_user();
-   
-   insert into public.profiles (id)
-   select id from auth.users
+
+   insert into public.profiles (id, display_name)
+   select id, raw_user_meta_data ->> 'display_name' from auth.users
    on conflict do nothing;
    ```
 
@@ -77,6 +77,10 @@ order by 1, 2;
 ## What can break
 
 Screens that read the old view stop working the moment it is dropped, so switch the app first. Use the display name only for showing, never for deciding who is an admin: users can edit that field themselves. Do not copy emails or other personal details into the profiles table unless the app truly shows them.
+
+## Undo it
+
+Save the old view’s definition before you drop it (`select pg_get_viewdef('public.user_list'::regclass);`), so you can recreate it if you must. Recreating it brings the exposure back, so prefer fixing the app. To remove the new pieces, run `drop trigger on_auth_user_created on auth.users;`, `drop function public.handle_new_user();` and `drop table public.profiles;`. Drop the trigger first: a trigger that fails stops new sign-ups. To confirm the fix, run the check again: it should return no rows.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

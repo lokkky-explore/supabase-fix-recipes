@@ -38,6 +38,10 @@ order by 1;
 
 Code that finds the extension’s functions through public stops finding them once they move, and fails with errors such as “function does not exist”. That includes your own functions with a fixed or empty search_path. Some extensions cannot be moved at all, and Postgres then refuses the command with an error and changes nothing. Do one extension at a time, on a branch or a copy first.
 
+## Undo it
+
+Move it back with `alter extension ltree set schema public;`. The step 3 check is the confirmation: it should return no rows after the fix.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-extension-in-public

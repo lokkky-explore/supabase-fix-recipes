@@ -32,7 +32,7 @@ order by 1, 2;
 
    ```sql
    drop policy "users can read" on public.notes;
-   
+
    create policy "read own rows" on public.notes
      for select to authenticated
      using ((select auth.uid()) = user_id);
@@ -44,7 +44,7 @@ order by 1, 2;
    create policy "read own memberships" on public.team_members
      for select to authenticated
      using ((select auth.uid()) = user_id);
-   
+
    create policy "read team projects" on public.projects
      for select to authenticated
      using (
@@ -60,6 +60,10 @@ order by 1, 2;
 ## What can break
 
 Tightening a read rule also hides rows from your own screens that relied on seeing everything: admin pages, exports, totals, search and lists that join to other people’s rows. Live updates follow the same rules, so some users stop receiving them. List every screen that reads the table before you change it, give admins their own rule, and make the change on a branch or a copy first.
+
+## Undo it
+
+Before you drop the old rule, save its text (`select * from pg_policies where tablename = 'notes';`). To go back, run `drop policy "read own rows" on public.notes;` and recreate the old rule from the saved text, which lets every logged-in user read every row again, so use it only as a stop-gap. The team rules come off the same way: `drop policy "read team projects" on public.projects;` and `drop policy "read own memberships" on public.team_members;`. To confirm the fix, run the check again: only the rows you chose to allow should remain.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

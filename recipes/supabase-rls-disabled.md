@@ -35,16 +35,16 @@ order by tablename;
    create policy "read own rows" on public.notes
      for select to authenticated
      using ((select auth.uid()) = user_id);
-   
+
    create policy "insert own rows" on public.notes
      for insert to authenticated
      with check ((select auth.uid()) = user_id);
-   
+
    create policy "update own rows" on public.notes
      for update to authenticated
      using ((select auth.uid()) = user_id)
      with check ((select auth.uid()) = user_id);
-   
+
    create policy "delete own rows" on public.notes
      for delete to authenticated
      using ((select auth.uid()) = user_id);
@@ -63,6 +63,10 @@ order by tablename;
 ## What can break
 
 Turning RLS on without rules blocks your own app too: lists come back empty and saves fail without a clear error. Tables with no user_id column, shared team data and admin screens each need a different rule, so do this on a branch or a copy first.
+
+## Undo it
+
+If your app breaks and you need it working again while you fix the rules, run `alter table public.notes disable row level security;`. That reopens the table to everyone, so treat it as a short stop-gap. Rules you added can be removed one by one with `drop policy "read own rows" on public.notes;`. To confirm the fix, run the check again: `rowsecurity` should be true for every table you meant to protect.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

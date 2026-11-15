@@ -46,12 +46,12 @@ order by 1, 2;
 
    ```sql
    create schema if not exists private;
-   
+
    alter foreign table public.some_foreign_table set schema private;
-   
+
    grant usage on schema private to anon, authenticated;
    grant select on private.some_foreign_table to anon, authenticated;
-   
+
    create or replace function public.my_foreign_rows()
    returns table (id integer, data text, author_id uuid)
    language sql
@@ -68,6 +68,10 @@ order by 1, 2;
 ## What can break
 
 Screens that read the foreign table directly stop working once permission is taken away or the table is moved, and the app must call the function instead. The function’s own rule is the only protection, so a wrong rule leaks rows just as before. Test it as two different users. Moving the table also breaks any other object that refers to it by its old name.
+
+## Undo it
+
+To give read permission back, run `grant select on public.some_foreign_table to anon, authenticated;`. To move the table back, run `alter foreign table private.some_foreign_table set schema public;`, and `drop function public.my_foreign_rows();` for the function. To confirm the fix, run the check again: the table should no longer be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

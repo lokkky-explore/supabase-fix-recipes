@@ -56,10 +56,10 @@ order by 1, 2;
 
    ```sql
    revoke all on all tables in schema public from anon, authenticated;
-   
+
    alter default privileges in schema public
-     revoke select on tables from anon, authenticated;
-   
+     revoke all on tables from anon, authenticated;
+
    grant select on public.profiles to authenticated;
    grant select, insert on public.orders to authenticated;
    ```
@@ -69,6 +69,10 @@ order by 1, 2;
 ## What can break
 
 Unlike lint 0026, you cannot revoke from authenticated across the board, because the app almost certainly reads tables as a logged-in user. The all-tables revoke breaks every screen until each needed table is granted back, so list them first and test on a branch or a copy. Hiding a table also hides it from your own signed-in code, not only from outsiders.
+
+## Undo it
+
+To restore a grant, run `grant select on public.some_table to authenticated;` for each table that stopped working. To restore the old default for new tables, run `alter default privileges in schema public grant select on tables to anon, authenticated;`. Dropping the extension can be undone with `create extension pg_graphql;`. Save the list of existing grants before the all-tables revoke so you can put back what you removed. To confirm the fix, run the check again.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

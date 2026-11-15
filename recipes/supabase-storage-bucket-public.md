@@ -37,7 +37,7 @@ where schemaname = 'storage' and tablename = 'objects';
        bucket_id = 'uploads'
        and (storage.foldername(name))[1] = (select auth.uid())::text
      );
-   
+
    create policy "upload to own folder" on storage.objects
      for insert to authenticated
      with check (
@@ -59,6 +59,10 @@ where schemaname = 'storage' and tablename = 'objects';
 ## What can break
 
 Every public link already saved in your database, emails or pages stops working the moment the bucket goes private. Files that were not saved under a per-user folder need moving, or a different rule, before the folder rule fits.
+
+## Undo it
+
+To bring old links back, run `update storage.buckets set public = true where id = 'uploads';`. Only do that for files that are safe for anyone to see. The rules you added can be removed with `drop policy "read own files" on storage.objects;` and `drop policy "upload to own folder" on storage.objects;`. To confirm the fix, run the check again: the bucket should show public false, and no rule should let everyone read it. An older wide rule on storage.objects that you did not write can still let any logged-in user read every file, so remove it if the check lists one.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

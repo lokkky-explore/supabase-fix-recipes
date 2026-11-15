@@ -34,7 +34,7 @@ order by 1, 2;
 
    ```sql
    alter table public.customers enable row level security;
-   
+
    create policy "read own row" on public.customers
      for select to authenticated
      using ((select auth.uid()) = user_id);
@@ -44,18 +44,18 @@ order by 1, 2;
 
    ```sql
    create schema if not exists private;
-   
+
    create table private.customer_secrets (
      customer_id uuid primary key references public.customers (id) on delete cascade,
      tax_id text
    );
-   
+
    -- belt and braces: if this schema is ever exposed by mistake, the table still returns nothing
    alter table private.customer_secrets enable row level security;
-   
+
    insert into private.customer_secrets (customer_id, tax_id)
    select id, tax_id from public.customers;
-   
+
    -- after checking the copy, and after taking a backup:
    alter table public.customers drop column tax_id;
    ```
@@ -67,6 +67,10 @@ order by 1, 2;
 ## What can break
 
 Turning RLS on without a rule blocks your own app too. Dropping a column cannot be undone, and any screen or function that reads it fails afterwards, so back up and update the app first. If the values were public for a while, treat them as exposed: tell the people affected where the law or your terms require it, and change any password or key that was stored.
+
+## Undo it
+
+Turning RLS back off (`alter table public.customers disable row level security;`) reopens the table, so use it only as a stop-gap. A dropped column cannot be undone: restore it from your backup, or copy the values back from the private table with `alter table public.customers add column tax_id text;` and an update from `private.customer_secrets`. To confirm the fix, run the check again: the table should no longer be listed.
 
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 

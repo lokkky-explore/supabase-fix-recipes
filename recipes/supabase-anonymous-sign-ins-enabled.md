@@ -47,6 +47,10 @@ order by 1, 2, 3;
 
 Turning the feature off ends guest sign-in for everyone, so a try-before-you-sign-up flow stops working. A restrictive rule also blocks guests from actions they could do before, such as saving a draft, which may be what your app depends on. Test with a real guest session before you rely on the check, because a login token without the flag fails it.
 
+## Undo it
+
+Switch “Allow anonymous sign-ins” back on in the dashboard to restore guest sign-in. Remove the restrictive rule with `drop policy "permanent users only" on public.notes;`. To confirm the fix, run the first check again to see how many guest accounts remain, and test a guest session against each table.
+
 > Table, column and bucket names are examples. This is general guidance for one finding; it does not make an app safe on its own. Back up before changing a live database.
 
 Explained with the same content at https://lokandco.com/fix/supabase-anonymous-sign-ins-enabled
