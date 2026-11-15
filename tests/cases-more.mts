@@ -7,12 +7,18 @@ export default (A: string, B: string, NOTES: string, ok: any) => {
     create table public.orders (id serial primary key, user_id uuid);`;
   return {
     "supabase-extension-in-public": {
-      pre: `create extension ltree; create table public.t (p ltree); insert into public.t values ('a.b');`,
+      pre: `create extension ltree; create table public.t (p ltree); insert into public.t values ('a.b');
+            create function public.depth(p text) returns int language sql set search_path = public as $$ select nlevel(p::ltree) $$;`,
       expectCheckBefore: 1, expectCheckAfter: 0,
-      after: async (c: any) => [
-        `ltree still usable with schema prefix: ${await ok(c.db.query("select p::text from public.t where p operator(extensions.<@) 'a'::extensions.ltree"), "allowed")}`,
-        `unqualified type now fails: ${await ok(c.db.query("select 'a.b'::ltree"), "blocked")}`,
-      ],
+      after: async (c: any) => {
+        // Real Supabase puts extensions on the default search_path, so unqualified use keeps working there.
+        const onPath = /extensions/.test((await c.db.query("select current_setting('search_path') p")).rows[0].p);
+        return [
+          `ltree still usable with schema prefix: ${await ok(c.db.query("select p::text from public.t where p operator(extensions.<@) 'a'::extensions.ltree"), "allowed")}`,
+          `unqualified type (extensions on search_path: ${onPath}): ${await ok(c.db.query("select 'a.b'::ltree"), onPath ? "allowed" : "blocked")}`,
+          `function pinned to search_path=public now fails: ${await ok(c.db.query("select public.depth('a.b')"), "blocked")}`,
+        ];
+      },
     },
     "supabase-materialized-view-in-api": {
       pre: `create materialized view public.sales_totals as select 1 as total;`,
@@ -20,7 +26,10 @@ export default (A: string, B: string, NOTES: string, ok: any) => {
       after: async (c: any) => [`anon read: ${await ok(c.as("anon", null, "select * from public.sales_totals"), "blocked")}`],
     },
     "supabase-foreign-table-in-api": {
-      pre: `create foreign data wrapper dummy; create server s foreign data wrapper dummy;
+      // Real Supabase refuses a wrapper without a handler, so fall back to postgres_fdw there.
+      pre: `do $d$ begin create foreign data wrapper dummy; create server s foreign data wrapper dummy;
+            exception when others then create extension if not exists postgres_fdw with schema extensions; create server s foreign data wrapper postgres_fdw;
+            end $d$;
             create foreign table public.some_foreign_table (id integer, data text, author_id uuid) server s;`,
       expectCheckBefore: 1, expectCheckAfter: 0,
       after: async (c: any) => [

@@ -2,14 +2,37 @@
 // set up with Supabase-style roles (anon, authenticated) and two test users, A and B.
 // For each recipe: build the insecure state, run the check, apply the fix, then try to
 // read or write as the wrong user. Usage: npm install && npm test
+// Real Supabase instead of PGlite: tests/real-supabase.sh (each recipe gets a fresh copy of the
+// local Supabase database, with the real auth and storage schemas, and runs as the postgres role).
 import { PGlite } from "@electric-sql/pglite";
 import { ltree } from "@electric-sql/pglite/contrib/ltree";
 import { readdirSync, readFileSync } from "node:fs";
 
+type Db = { exec(sql: string): Promise<{ rows: any[] }[]>; query<T = any>(sql: string): Promise<{ rows: T[] }>; close(): Promise<void> };
+const ADMIN_URL = process.env.PG_ADMIN_URL, PG_URL = process.env.PG_URL;
+const pg = ADMIN_URL ? (await import("pg")).default : null;
+async function openDb(slug: string): Promise<Db> {
+  if (!pg) return new PGlite({ extensions: { ltree } });
+  const name = "rt_" + slug.replace(/-/g, "_");
+  const admin = new pg.Client(ADMIN_URL);
+  await admin.connect();
+  await admin.query(`drop database if exists ${name} with (force)`);
+  await admin.query(`create database ${name} template recipe_tpl owner postgres`); // as the real "postgres" db
+  const url = new URL(PG_URL!);
+  url.pathname = "/" + name;
+  const cl = new pg.Client(url.toString());
+  await cl.connect();
+  return {
+    exec: async (sql) => { const r: any = await cl.query(sql); return Array.isArray(r) ? r : [r]; },
+    query: (sql) => cl.query(sql),
+    close: async () => { await cl.end(); await admin.query(`drop database ${name} with (force)`); await admin.end(); },
+  };
+}
+
 const dir = new URL("../recipes/", import.meta.url);
 const blocks = (s: string) => [...s.matchAll(/```\w*\n([\s\S]*?)```/g)].map((m) => m[1].replace(/^   /gm, "").trim());
 const fixes = readdirSync(dir).filter((f) => f.endsWith(".md")).map((f) => {
-  const text = readFileSync(new URL(f, dir), "utf8");
+  const text = readFileSync(new URL(f, dir), "utf8").replace(/\r\n/g, "\n"); // Windows checkouts are CRLF
   const [check, rest] = text.split("## Check it yourself")[1].split("## The fix");
   const steps = rest.split("## What can break")[0].split(/^\d+\. /m).slice(1).map((st) => ({ code: blocks(st)[0] }));
   return { slug: f.replace(".md", ""), check: { code: blocks(check)[0] }, steps };
@@ -22,7 +45,7 @@ create schema auth; create schema storage; create schema extensions;
 create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb default '{}', is_anonymous boolean default false);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(nullif(current_setting('request.jwt.claims', true),'')::jsonb ->> 'sub','')::uuid $$;
 create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true),''),'{}')::jsonb $$;
-create table storage.buckets (id text primary key, public boolean default false);
+create table storage.buckets (id text primary key, name text, public boolean default false);
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
 alter table storage.objects enable row level security;
 create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;
@@ -38,7 +61,7 @@ const A = "11111111-1111-1111-1111-111111111111", B = "22222222-2222-2222-2222-2
 const NOTES = `create table public.notes (id serial primary key, user_id uuid, body text);
 insert into public.notes (user_id, body) values ('${A}','a1'),('${A}','a2'),('${B}','b1');`;
 
-type Ctx = { db: PGlite; as: (role: string, claims: object | null, sql: string) => Promise<any[]>; count: (role: string, claims: object | null, sql: string) => Promise<number> };
+type Ctx = { db: Db; as: (role: string, claims: object | null, sql: string) => Promise<any[]>; count: (role: string, claims: object | null, sql: string) => Promise<number> };
 type Case = { pre: string; expectCheckBefore?: number; expectCheckAfter?: number; skipSteps?: number[]; after?: (c: Ctx) => Promise<string[]> };
 const ok = (p: Promise<any>, good: "allowed" | "blocked") =>
   p.then(() => (good === "allowed" ? "allowed" : "ALLOWED (bad)"), () => (good === "blocked" ? "blocked" : "BLOCKED (bad)"));
@@ -56,7 +79,7 @@ export const cases: Record<string, Case> = {
     ],
   },
   "supabase-storage-bucket-public": {
-    pre: `insert into storage.buckets values ('uploads', true); insert into storage.objects(bucket_id,name) values ('uploads','${A}/a.png'),('uploads','${B}/b.png');`,
+    pre: `insert into storage.buckets(id,name,public) values ('uploads','uploads',true); insert into storage.objects(bucket_id,name) values ('uploads','${A}/a.png'),('uploads','${B}/b.png');`,
     after: async (c) => [
       `A files=${await c.count("authenticated", { sub: A }, "select * from storage.objects")} (want 1)`,
       `anon files=${await c.count("anon", null, "select * from storage.objects")} (want 0)`,
@@ -120,7 +143,7 @@ export const cases: Record<string, Case> = {
     ],
   },
   "supabase-public-bucket-allows-listing": {
-    pre: `insert into storage.buckets values ('avatars', true); insert into storage.objects(bucket_id,name) values ('avatars','${A}/a.png'),('avatars','${B}/b.png');
+    pre: `insert into storage.buckets(id,name,public) values ('avatars','avatars',true); insert into storage.objects(bucket_id,name) values ('avatars','${A}/a.png'),('avatars','${B}/b.png');
           create policy "Public bucket listing" on storage.objects for select using (bucket_id = 'avatars');`,
     after: async (c) => [
       `anon list=${await c.count("anon", null, "select * from storage.objects")} (want 0)`,
@@ -161,7 +184,7 @@ for (const f of fixes) {
   if (only && f.slug !== only) continue;
   const c = cases[f.slug];
   const out: string[] = [];
-  const db = new PGlite({ extensions: { ltree } });
+  const db = await openDb(f.slug);
   const as = async (role: string, claims: object | null, sql: string) => {
     await db.exec(`set role ${role}; select set_config('request.jwt.claims', '${claims ? JSON.stringify(claims) : ""}', false);`);
     try { return (await db.query(sql)).rows; } finally { await db.exec(`reset role; select set_config('request.jwt.claims','',false);`); }
@@ -169,7 +192,7 @@ for (const f of fixes) {
   const ctx: Ctx = { db, as, count: async (r, cl, s) => (await as(r, cl, s)).length };
   const lastRows = async (sql: string) => { const r = await db.exec(sql); return r[r.length - 1].rows.length; };
   try {
-    await db.exec(BOOT);
+    if (!pg) await db.exec(BOOT);
     if (c?.pre) await db.exec(c.pre);
     if (isSql(f.check.code)) {
       const n = await lastRows(f.check.code);
