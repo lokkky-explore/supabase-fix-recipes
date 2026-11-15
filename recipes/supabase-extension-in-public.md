@@ -30,13 +30,13 @@ order by 1;
    alter extension ltree set schema extensions;
    ```
 
-2. Search your app code, your functions and your saved queries for the extension’s functions and operators. Anything that called them by a name found through public needs the new schema in front, or needs extensions on the search path.
+2. Supabase puts the extensions schema on the default search path, so app code and queries that call the extension’s functions by their plain name keep working. Search for two things that do not: calls written with public. in front, and your own functions that set their own search_path (for example to '' or to public only). Give those the new schema in front, for example extensions.some_function().
 
 3. Run the check again. It should return no rows. Then test the feature that uses the extension once, refresh the Security Advisor and run your scanner again.
 
 ## What can break
 
-Code that finds the extension’s functions through public stops finding them once they move, and fails with errors such as “function does not exist”. That includes your own functions with a fixed or empty search_path. Some extensions cannot be moved at all, and Postgres then refuses the command with an error and changes nothing. Do one extension at a time, on a branch or a copy first.
+Most code keeps working, because the extensions schema is on Supabase’s default search path. What stops working is code that names public. in front of the extension’s functions, and your own functions with a fixed or empty search_path; those fail with errors such as “function does not exist”. Some extensions cannot be moved at all, and Postgres then refuses the command with an error and changes nothing. Do one extension at a time, on a branch or a copy first.
 
 ## Undo it
 
