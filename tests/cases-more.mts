@@ -86,6 +86,29 @@ export default (A: string, B: string, NOTES: string, ok: any) => {
         ];
       },
     },
+    "supabase-policy-missing-with-check": {
+      pre: `create table public.org_members (org_id uuid, user_id uuid, role text, nickname text);
+        insert into public.org_members values ('88888888-8888-8888-8888-888888888888','${A}','member','ann');
+        insert into public.org_members values ('99999999-9999-9999-9999-999999999999','${B}','admin','bob');
+        create table public.org_secrets (org_id uuid, secret text);
+        insert into public.org_secrets values ('99999999-9999-9999-9999-999999999999','victim-org-private-record');
+        alter table public.org_members enable row level security;
+        create policy "read own memberships" on public.org_members for select to authenticated using ((select auth.uid()) = user_id);
+        create policy "update own memberships" on public.org_members for update to authenticated using ((select auth.uid()) = user_id);
+        alter table public.org_secrets enable row level security;
+        create policy "members read org secrets" on public.org_secrets for select to authenticated using (exists (select 1 from public.org_members m where m.org_id = org_secrets.org_id and m.user_id = (select auth.uid()) and m.role = 'admin'));`,
+      expectCheckBefore: 1, expectCheckAfter: 0, skipSteps: [4],
+      after: async (c: any) => [
+        `A forges admin row in victim org: ${await ok(c.as("authenticated", { sub: A }, `update public.org_members set org_id='99999999-9999-9999-9999-999999999999', role='admin' where user_id='${A}' returning 1`), "blocked")}`,
+        `A reads victim org secrets=${await c.count("authenticated", { sub: A }, "select secret from public.org_secrets")} (want 0)`,
+        `B (real admin) reads org secrets=${await c.count("authenticated", { sub: B }, "select secret from public.org_secrets")} (want 1)`,
+        `A renames own row: ${await ok(c.as("authenticated", { sub: A }, `update public.org_members set nickname='x' where user_id='${A}' returning 1`), "blocked")}`,
+        `A update user_id col=${(await c.db.query(`select has_column_privilege('authenticated','public.org_members','user_id','update')::int x`)).rows[0].x} (want 1)`,
+        `A update role col=${(await c.db.query(`select has_column_privilege('authenticated','public.org_members','role','update')::int x`)).rows[0].x} (want 0)`,
+        `A update org_id col=${(await c.db.query(`select has_column_privilege('authenticated','public.org_members','org_id','update')::int x`)).rows[0].x} (want 0)`,
+        `A update nickname col=${(await c.db.query(`select has_column_privilege('authenticated','public.org_members','nickname','update')::int x`)).rows[0].x} (want 0)`,
+      ],
+    },
     "supabase-security-definer-function-authenticated": {
       pre: `create function public.my_priv_op(a int, b text) returns int language sql security definer set search_path = '' as $$ select 1 $$;`,
       expectCheckBefore: 1, expectCheckAfter: 0,

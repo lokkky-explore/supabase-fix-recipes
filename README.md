@@ -28,6 +28,7 @@ A scanner tells you *what* is open. Each recipe here tells you what it means, ho
 | Signed-In Users Can See Object in GraphQL Schema (Supabase Security Advisor, lint 0027) | Anyone who signs up, even with a throwaway account, can list the names and columns of your tables and views through the GraphQL address. | [supabase-graphql-authenticated-table-exposed](recipes/supabase-graphql-authenticated-table-exposed.md) |
 | Signed-In Users Can Execute SECURITY DEFINER Function (Supabase Security Advisor, lint 0029) | Any signed-in user, including a throwaway account if signup is open, can run that function over the web, and it runs with its owner’s permissions, skipping your Row Level Security rules. | [supabase-security-definer-function-authenticated](recipes/supabase-security-definer-function-authenticated.md) |
 | (No scanner reports it) RLS is on, but logged-in users can see each other’s data | Anyone who signs up can read other customers’ rows, while every scan from outside comes back clean. | [supabase-users-can-see-other-users-data](recipes/supabase-users-can-see-other-users-data.md) |
+| (No scanner reports it) An update rule with no WITH CHECK lets a signed-in user rewrite every column the rule does not name | The owner of a row can keep their own user id and set their role to admin, then read another org’s private rows. | [supabase-policy-missing-with-check](recipes/supabase-policy-missing-with-check.md) |
 
 ## How to use a recipe
 
