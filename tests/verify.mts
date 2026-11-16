@@ -177,6 +177,7 @@ export const cases: Record<string, Case> = {
   },
 };
 try { Object.assign(cases, (await import("./cases-more.mts")).default(A, B, NOTES, ok)); } catch (e: any) { if (!/Cannot find module/.test(e.message)) throw e; }
+try { Object.assign(cases, (await import("./cases-gaps.mts")).default(A, B, NOTES, ok)); } catch (e: any) { if (!/Cannot find module/.test(e.message)) throw e; }
 
 const isSql = (code: string) => !/^\s*(\/\/|const |import |await |sb_)/.test(code);
 let bad = 0;
